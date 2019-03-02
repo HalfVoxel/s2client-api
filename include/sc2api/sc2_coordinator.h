@@ -168,6 +168,9 @@ public:
     //! Loads replays from a file.
     // \param path The file path.
     bool LoadReplayList(const std::string& file_path);
+
+    void LoadReplayList(const std::vector<std::string>& file_paths);
+
     //! Saves replays to a file.
     // \param path The file path.
     void SaveReplayList(const std::string& file_path);

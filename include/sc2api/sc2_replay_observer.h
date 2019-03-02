@@ -30,10 +30,17 @@ public:
     //!< \return The observer action interface.
     ObserverActionInterface* ObserverAction();
 
+    virtual int GetReplayPerspective() {
+        return 1;
+    }
+
     //! Determines if the replay should be filtered out.
     //! \param replay_info Replay information used to decide if the replay should be filtered.
     //!< \return If 'true', the replay will be rejected and not analyzed.
     virtual bool IgnoreReplay(const ReplayInfo& replay_info, uint32_t& player_id);
+    virtual bool IgnoreReplay(const std::string& filepath) {
+        return false;
+    }
 
     void SetControl(ControlInterface* control);
 

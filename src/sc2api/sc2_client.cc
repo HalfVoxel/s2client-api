@@ -405,7 +405,7 @@ const Effects& ObservationImp::GetEffectData(bool force_refresh) const {
 }
 
 const GameInfo& ObservationImp::GetGameInfo() const {
-    if (game_info_cached_) {
+    if (game_info_cached_ && false) {
         return game_info_;
     }
 
@@ -423,6 +423,8 @@ const GameInfo& ObservationImp::GetGameInfo() const {
         return game_info_;
     }
 
+    std::cerr << "Storing new game info" << std::endl;
+    game_info_ = GameInfo();
     Convert(response_game_info, game_info_);
 
     game_info_cached_ = true;

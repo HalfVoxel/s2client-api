@@ -43,6 +43,7 @@ int LaunchProcess(ProcessSettings& process_settings, Client* client, int window_
     std::vector<std::string> cl = {
         "-listen", process_settings.net_address,
 		"-port", std::to_string(pi.port)
+        // "-PrePopulateCache"
     };
 
     // DirectX will fail if multiple games try to launch in fullscreen mode. Force them into windowed mode.
@@ -212,6 +213,10 @@ bool CoordinatorImp::ShouldIgnore(ReplayObserver* r, const std::string& file) {
     if (file.empty())
         return true;
 
+    if (r->IgnoreReplay(file)) {
+        return true;
+    }
+
     // Gather replay information with the available observer.
     r->ReplayControl()->GatherReplayInfo(file, true);
 
@@ -251,32 +256,32 @@ void CoordinatorImp::StartReplay() {
     }
 
     // Run a replay with each available replay observer.
-    for (auto r : replay_observers_) {
-        // If the replay observer is idle or out of game use it for a new replay.
-        if (!r->Control()->IsReadyForCreateGame()) {
-            continue;
-        }
+    auto& replays = replay_settings_.replay_file;
+    while (replays.size() != 0) {
+        const std::string& file = replay_settings_.replay_file.back();
+        bool launched = false;
 
-        r->ReplayControl()->UseGeneralizedAbility(use_generalized_ability_id);
-
-        auto& replays = replay_settings_.replay_file;
-        while (replays.size() != 0) {
-            const std::string& file = replay_settings_.replay_file.back();
+        for (auto r : replay_observers_) {
+            // If the replay observer is idle or out of game use it for a new replay.
+            if (!r->Control()->IsReadyForCreateGame()) {
+                return;
+            }
 
             if (ShouldIgnore(r, file)) {
-                replays.pop_back();
-                continue;
+                break;
             }
 
             if (ShouldRelaunch(r)) {
                 break;
             }
 
-            bool launched = r->ReplayControl()->LoadReplay(file, interface_settings_, replay_settings_.player_id, process_settings_.realtime);
-            replays.pop_back();
-            if (launched)
-                break;
+            r->ReplayControl()->UseGeneralizedAbility(use_generalized_ability_id);
+
+            launched |= r->ReplayControl()->LoadReplay(file, interface_settings_, r->GetReplayPerspective(), process_settings_.realtime);
         }
+
+        replays.pop_back();
+        if (launched) break;
     }
 
     starcraft_started_ = true;
@@ -385,9 +390,9 @@ void CoordinatorImp::StepReplayObservers() {
         // If the replay is loading wait for it to finish loading before performing a step.
         if (r->Control()->HasResponsePending()) {
             // Don't consume a response if there isn't one in the queue.
-            if (replay_observers_.size() > 1 && !r->Control()->PollResponse()) {
-                return;
-            }
+            // if (replay_observers_.size() > 1 && !r->Control()->PollResponse()) {
+            //     return;
+            // }
             r->ReplayControl()->WaitForReplay();
         }
 
@@ -957,6 +962,13 @@ bool Coordinator::LoadReplayList(const std::string& file_path) {
     }
 
     return true;
+}
+
+void Coordinator::LoadReplayList(const std::vector<std::string>& file_paths) {
+    imp_->replay_settings_.replay_file.clear();
+    for (auto& path : file_paths) {
+        imp_->replay_settings_.replay_file.push_back(path);
+    }
 }
 
 void Coordinator::SaveReplayList(const std::string& file_path) {
